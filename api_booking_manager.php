@@ -1,16 +1,22 @@
 <?php
 // api_booking_manager.php
 header('Content-Type: application/json; charset=utf-8');
-require 'db_connect.php'; // Kết nối DB
+
+// Tắt báo lỗi ra màn hình để tránh làm hỏng JSON, chỉ log lỗi
+error_reporting(0); 
+ini_set('display_errors', 0);
+
+require 'db_connect.php';
 
 try {
-    // 1. Nhận các tham số lọc từ Client gửi lên
-    $dateFrom = isset($_GET['from']) ? $_GET['from'] : date('Y-m-01'); // Mặc định từ đầu tháng
-    $dateTo   = isset($_GET['to']) ? $_GET['to'] : date('Y-m-t');     // Mặc định đến cuối tháng
-    $status   = isset($_GET['status']) ? $_GET['status'] : '';        // Lọc theo trạng thái
-    $search   = isset($_GET['search']) ? $_GET['search'] : '';        // Tìm theo tên/sđt
+    // 1. Nhận tham số
+    $dateFrom = $_GET['from'] ?? date('Y-m-01');
+    $dateTo   = $_GET['to'] ?? date('Y-m-t');
+    $status   = $_GET['status'] ?? '';
+    $search   = trim($_GET['search'] ?? ''); // Xóa khoảng trắng thừa
 
-    // 2. Xây dựng câu Query động
+    // 2. Query cơ bản
+    // Lưu ý: Dùng start_time >= ... 00:00:00 để chính xác hơn và tận dụng index (tốt hơn dùng hàm DATE())
     $sql = "SELECT 
                 b.id, 
                 u.full_name, 
@@ -25,29 +31,39 @@ try {
             FROM bookings b
             LEFT JOIN users u ON b.user_id = u.id
             LEFT JOIN fields f ON b.field_id = f.id
-            WHERE DATE(b.start_time) BETWEEN :dateFrom AND :dateTo";
+            WHERE b.start_time >= :dateFrom AND b.start_time <= :dateTo";
 
     $params = [
-        ':dateFrom' => $dateFrom,
-        ':dateTo'   => $dateTo
+        ':dateFrom' => $dateFrom . ' 00:00:00', // Bắt đầu ngày
+        ':dateTo'   => $dateTo . ' 23:59:59'    // Kết thúc ngày
     ];
 
-    // Nếu có lọc trạng thái
+    // 3. Lọc theo trạng thái
     if (!empty($status)) {
         $sql .= " AND b.status = :status";
         $params[':status'] = $status;
     }
 
-    // Nếu có tìm kiếm từ khóa
+    // 4. Xử lý tìm kiếm (Đã sửa lỗi ID)
     if (!empty($search)) {
-        $sql .= " AND (u.full_name LIKE :search OR u.phone_number LIKE :search OR b.id = :idSearch)";
-        $params[':search'] = "%$search%";
-        $params[':idSearch'] = $search; // Tìm theo mã đơn
+        // Mở ngoặc đơn để gom nhóm điều kiện OR
+        $sql .= " AND (u.full_name LIKE :searchName OR u.phone_number LIKE :searchPhone";
+        
+        $params[':searchName'] = "%$search%";
+        $params[':searchPhone'] = "%$search%";
+
+        // Chỉ tìm theo ID nếu từ khóa là số
+        if (is_numeric($search)) {
+            $sql .= " OR b.id = :searchId";
+            $params[':searchId'] = $search;
+        }
+
+        $sql .= ")"; // Đóng ngoặc đơn quan trọng
     }
 
-    $sql .= " ORDER BY b.start_time DESC"; // Đơn mới nhất lên đầu
+    $sql .= " ORDER BY b.start_time DESC";
 
-    // 3. Thực thi
+    // 5. Thực thi
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -55,6 +71,7 @@ try {
     echo json_encode(['status' => 'success', 'data' => $bookings]);
 
 } catch (Exception $e) {
+    // Trả về JSON lỗi để JS hiển thị alert
     echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
 }
 ?>
