@@ -54,6 +54,10 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
         /* Badges */
         .badge-admin { background: #ffeeba; color: #856404; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
         .badge-user { background: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        /* Trạng thái đơn hàng trong lịch sử */
+        .status-confirmed { color: #28a745; font-weight: bold; }
+        .status-pending { color: #ffc107; font-weight: bold; }
+        .status-cancelled { color: #dc3545; font-weight: bold; }
     </style>
     <link rel="stylesheet" href="sidebar.css">
 </head>
@@ -145,7 +149,20 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
             </div>
         </div>
     </div>
+    <div id="historyModal" class="modal-overlay">
+    <div class="modal-container" style="max-width: 700px;"> <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
+            <h3 style="margin:0; color:#333;">Lịch Sử Đặt Sân</h3>
+            <button onclick="closeHistoryModal()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#666;">&times;</button>
+        </div>
+        
+        <div id="history_content" style="max-height: 400px; overflow-y: auto;">
+            </div>
 
+        <div class="modal-footer">
+            <button onclick="closeHistoryModal()" class="btn-cancel" style="background:#6c757d;">Đóng</button>
+        </div>
+    </div>
+</div>
     <script>
         let usersData = []; // Biến lưu dữ liệu
 
@@ -183,6 +200,10 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
                                 </td>
                                 <td>${roleBadge}</td>
                                 <td>
+                                    <button class="btn-action" style="background:#007bff; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; margin-right:5px;" 
+                                            onclick="viewHistory(${u.id}, '${u.full_name}')" title="Xem lịch sử">
+                                        <i class="fas fa-clock"></i>
+                                    </button>
                                     <button class="btn-action btn-edit" style="background:#17a2b8;" onclick="openEdit(${u.id})">
                                         <i class="fas fa-edit"></i>
                                     </button>
@@ -197,7 +218,85 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
                 }
             } catch(e) { console.error("Lỗi tải user:", e); }
         }
+// --- 2. XEM LỊCH SỬ ĐẶT SÂN ---
+        async function viewHistory(userId, userName) {
+            document.getElementById('historyModal').style.display = 'flex';
+            const contentDiv = document.getElementById('history_content');
+            contentDiv.innerHTML = `<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin"></i> Đang tải lịch sử của <b>${userName}</b>...</div>`;
 
+            try {
+                // Gọi API lấy lịch sử (dùng chung file api_users.php với action 'get_history')
+                const res = await fetch(`api_users.php?action=get_history&user_id=${userId}`);
+                const data = await res.json();
+
+                if (data.status === 'success' && data.history.length > 0) {
+                    let tableHtml = `
+                        <table class="custom-table" style="width:100%;">
+                            <thead style="background:#f8f9fa;">
+                                <tr>
+                                    <th>Ngày đặt</th>
+                                    <th>Sân</th>
+                                    <th>Khung giờ</th>
+                                    <th>Trạng thái</th>
+                                    <th>Tiền cọc</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    data.history.forEach(h => {
+    let statusClass = '';
+    if(h.status === 'confirmed') statusClass = 'status-confirmed';
+    else if(h.status === 'cancelled') statusClass = 'status-cancelled';
+    else statusClass = 'status-pending';
+
+    // Format ngày
+    const dateObj = new Date(h.booking_date);
+    const dateStr = dateObj.toLocaleDateString('vi-VN');
+
+    // --- SỬA LỖI HIỂN THỊ TIỀN ---
+    // Logic: Nếu có tiền cọc > 0 thì lấy tiền cọc, ngược lại lấy tổng tiền
+    // Lý do: Trong database của bạn deposit_amount đang là 0.00
+    let moneyValue = Number(h.deposit_amount); 
+    if (moneyValue === 0) {
+        moneyValue = Number(h.total_price);
+    }
+    
+    // Đảm bảo không bị lỗi NaN nếu dữ liệu null
+    if (isNaN(moneyValue)) moneyValue = 0;
+
+    // Format sang dạng tiền tệ VNĐ (ví dụ: 400.000 ₫)
+    const moneyFormatted = new Intl.NumberFormat('vi-VN', { 
+        style: 'currency', 
+        currency: 'VND' 
+    }).format(moneyValue);
+    // -----------------------------
+
+    tableHtml += `
+        <tr>
+            <td>${dateStr}</td>
+            <td>${h.field_name}</td>
+            <td>${h.start_time} - ${h.end_time}</td>
+            <td class="${statusClass}">${h.status.toUpperCase()}</td>
+            <td style="font-weight:bold; color:#d35400;">${moneyFormatted}</td>
+        </tr>
+    `;
+});                    contentDiv.innerHTML = tableHtml;
+                } else {
+                    contentDiv.innerHTML = `<div style="text-align:center; padding:30px; color:#666;">
+                        <i class="fas fa-calendar-times" style="font-size:40px; margin-bottom:10px; display:block;"></i>
+                        Khách hàng này chưa có lịch sử đặt sân nào.
+                    </div>`;
+                }
+            } catch (error) {
+                console.error(error);
+                contentDiv.innerHTML = `<div style="color:red; text-align:center;">Lỗi khi tải dữ liệu!</div>`;
+            }
+        }
+        // --- THÊM HÀM ĐÓNG MODAL LỊCH SỬ ---
+    function closeHistoryModal() {
+        document.getElementById('historyModal').style.display = 'none';
+    }
         // --- 2. XỬ LÝ MODAL ---
         function openModal(mode) {
             document.getElementById('userModal').style.display = 'flex';
@@ -286,12 +385,18 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'ADMIN') {
             } catch(e) { console.error(e); }
         }
 
-        // Đóng modal khi click ra ngoài
-        window.onclick = function(event) {
-            if (event.target == document.getElementById('userModal')) {
-                closeModal();
-            }
+        // --- SỬA LẠI ĐOẠN ĐÓNG KHI CLICK RA NGOÀI (Cho cả 2 modal) ---
+    window.onclick = function(event) {
+        const userModal = document.getElementById('userModal');
+        const historyModal = document.getElementById('historyModal');
+
+        if (event.target == userModal) {
+            closeModal();
         }
+        if (event.target == historyModal) {
+            closeHistoryModal();
+        }
+    }
 
         // Chạy lần đầu
         loadUsers();

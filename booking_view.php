@@ -32,6 +32,40 @@ if ($is_logged_in) {
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="booking.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    
+    <style>
+        /* CSS CHO SLIDER */
+        .swiper {
+            width: 100%;
+            padding-bottom: 50px !important; /* Chừa chỗ cho nút pagination nếu cần */
+            padding-top: 10px;
+        }
+        .swiper-slide {
+            height: auto; /* Để các thẻ cao bằng nhau */
+            display: flex;
+            justify-content: center;
+        }
+        .custom-card {
+            width: 100%;
+            height: 100%; /* Card giãn hết chiều cao slide */
+            display: flex;
+            flex-direction: column;
+        }
+        /* Chỉnh màu mũi tên sang màu vàng/cam chủ đạo */
+        .swiper-button-next, .swiper-button-prev {
+            color: var(--primary-color, #ffc107);
+            background: rgba(255, 255, 255, 0.8);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .swiper-button-next:after, .swiper-button-prev:after {
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
 
@@ -123,22 +157,33 @@ if ($is_logged_in) {
         </div>
     </div>
 
-    <div class="container" style="max-width: 1100px; margin: 0 auto; padding: 0 20px;">
+    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
         
         <div class="section-header">
             <div class="section-title">Hệ Thống Sân Bãi</div>
             <div class="section-subtitle">Chất lượng cỏ nhân tạo tiêu chuẩn FIFA</div>
         </div>
-        <div id="fields_grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px;">
-            <p style="text-align: center; width: 100%;">Đang tải danh sách sân...</p>
+        
+        <div class="swiper mySwiperFields">
+            <div class="swiper-wrapper" id="fields_grid_wrapper">
+                <div class="swiper-slide"><p>Đang tải danh sách sân...</p></div>
+            </div>
+            <div class="swiper-button-next"></div>
+            <div class="swiper-button-prev"></div>
         </div>
+
 
         <div class="section-header">
             <div class="section-title">Tin Tức & Sự Kiện</div>
             <div class="section-subtitle">Cập nhật những thông tin mới nhất từ chúng tôi</div>
         </div>
-        <div id="news_grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 30px; margin-bottom: 60px;">
-            <p style="text-align: center; width: 100%;">Đang tải tin tức...</p>
+        
+        <div class="swiper mySwiperNews">
+            <div class="swiper-wrapper" id="news_grid_wrapper">
+                <div class="swiper-slide"><p>Đang tải tin tức...</p></div>
+            </div>
+             <div class="swiper-button-next"></div>
+            <div class="swiper-button-prev"></div>
         </div>
 
     </div>
@@ -201,26 +246,54 @@ if ($is_logged_in) {
         </div>
     </div>
 
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
 <script>
-    // JS Logic giữ nguyên, chỉ chỉnh lại HTML Template trong các hàm render
     const isLoggedIn = <?php echo $is_logged_in ? 'true' : 'false'; ?>;
     let currentTotalPrice = 0;
 
     document.addEventListener("DOMContentLoaded", function() {
         loadNews();
-        // loadFieldsDisplay đã được gọi ở cuối script
+        loadFieldsDisplay();
     });
 
-    // --- RENDER TIN TỨC (Update Class Card) ---
+    // --- CẤU HÌNH SLIDER (ĐÃ CẬP NHẬT TỰ ĐỘNG CHẠY & LOOP) ---
+    function initSwiper(selector) {
+        new Swiper(selector, {
+            slidesPerView: 1, 
+            spaceBetween: 20,
+            loop: true, // <--- 1. Bật tính năng lặp lại vô tận
+            autoplay: { // <--- 2. Bật tính năng tự động chạy
+                delay: 3000, // Thời gian chờ: 3000ms = 3 giây
+                disableOnInteraction: false, // Tiếp tục tự chạy kể cả khi người dùng đã bấm mũi tên
+            },
+            navigation: {
+                nextEl: ".swiper-button-next",
+                prevEl: ".swiper-button-prev",
+            },
+            breakpoints: {
+                640: {
+                    slidesPerView: 2, 
+                    spaceBetween: 20,
+                },
+                1024: {
+                    slidesPerView: 3, 
+                    spaceBetween: 30,
+                },
+            },
+        });
+    }
+
+    // --- RENDER TIN TỨC ---
     async function loadNews() {
-        const grid = document.getElementById('news_grid');
+        const wrapper = document.getElementById('news_grid_wrapper');
         try {
             const res = await fetch('api_public_posts.php');
-            if (!res.ok) { grid.innerHTML = '<p>Chưa kết nối API tin tức.</p>'; return; }
+            if (!res.ok) { wrapper.innerHTML = '<div class="swiper-slide"><p>Lỗi kết nối API.</p></div>'; return; }
             const result = await res.json();
 
             if(result.status === 'success' && result.data.length > 0) {
-                grid.innerHTML = '';
+                wrapper.innerHTML = ''; 
                 result.data.forEach(post => {
                     const imgSrc = post.image && post.image !== '' ? post.image : 'https://via.placeholder.com/400x250?text=News';
                     
@@ -229,62 +302,68 @@ if ($is_logged_in) {
                     if(post.type === 'EVENT') { badgeColor = '#28a745'; typeName = 'Sự kiện'; }
 
                     const html = `
-                        <a href="post_detail.php?id=${post.id}" class="custom-card">
-                            <div class="card-img-wrapper">
-                                <img src="${imgSrc}" class="card-img">
-                                <span class="card-badge" style="background:${badgeColor}">${typeName}</span>
-                            </div>
-                            <div class="card-body">
-                                <h4 class="card-title">${post.title}</h4>
-                                <p class="card-text">${post.content}</p>
-                                <span style="color: var(--primary-color); font-weight: 600; font-size: 14px; margin-top: auto;">Xem chi tiết <i class="fas fa-arrow-right"></i></span>
-                            </div>
-                        </a>
+                        <div class="swiper-slide">
+                            <a href="post_detail.php?id=${post.id}" class="custom-card">
+                                <div class="card-img-wrapper">
+                                    <img src="${imgSrc}" class="card-img">
+                                    <span class="card-badge" style="background:${badgeColor}">${typeName}</span>
+                                </div>
+                                <div class="card-body">
+                                    <h4 class="card-title">${post.title}</h4>
+                                    <p class="card-text">${post.content}</p>
+                                    <span style="color: var(--primary-color); font-weight: 600; font-size: 14px; margin-top: auto;">Xem chi tiết <i class="fas fa-arrow-right"></i></span>
+                                </div>
+                            </a>
+                        </div>
                     `;
-                    grid.innerHTML += html;
+                    wrapper.innerHTML += html;
                 });
+                initSwiper(".mySwiperNews");
             } else {
-                grid.innerHTML = '<p style="text-align:center;">Hiện chưa có tin tức nào.</p>';
+                wrapper.innerHTML = '<div class="swiper-slide"><p>Hiện chưa có tin tức nào.</p></div>';
             }
         } catch(e) { console.error(e); }
     }
 
-    // --- RENDER DANH SÁCH SÂN (Update Class Card) ---
+    // --- RENDER DANH SÁCH SÂN ---
     async function loadFieldsDisplay() {
+        const wrapper = document.getElementById('fields_grid_wrapper');
         try {
             const res = await fetch('api_fields.php');
             const data = await res.json();
             
             if(data.status === 'success') {
-                const container = document.getElementById('fields_grid');
-                container.innerHTML = '';
+                wrapper.innerHTML = '';
                 
                 data.data.forEach(f => {
                     const img = f.image ? f.image : 'https://via.placeholder.com/400x300?text=San+Bong';
                     const price = new Intl.NumberFormat('vi-VN').format(f.price_per_hour);
                     
                     const html = `
-                        <div class="custom-card">
-                            <div class="card-img-wrapper">
-                                <img src="${img}" class="card-img">
-                            </div>
-                            <div class="card-body" style="text-align: center;">
-                                <h3 class="card-title" style="font-size: 20px;">${f.name}</h3>
-                                <p style="color:#dc3545; font-weight:bold; font-size: 18px; margin-bottom: 15px;">${price} đ/giờ</p>
-                                <a href="field_detail.php?id=${f.id}" style="display:inline-block; width:100%; padding:10px 0; background: var(--bg-light); color: var(--text-dark); border-radius: 8px; font-weight: 600; transition: 0.3s; text-decoration: none;">
-                                    Xem chi tiết
-                                </a>
+                        <div class="swiper-slide">
+                            <div class="custom-card">
+                                <div class="card-img-wrapper">
+                                    <img src="${img}" class="card-img">
+                                </div>
+                                <div class="card-body" style="text-align: center;">
+                                    <h3 class="card-title" style="font-size: 20px;">${f.name}</h3>
+                                    <p style="color:#dc3545; font-weight:bold; font-size: 18px; margin-bottom: 15px;">${price} đ/giờ</p>
+                                    <a href="field_detail.php?id=${f.id}" style="display:inline-block; width:100%; padding:10px 0; background: var(--bg-light); color: var(--text-dark); border-radius: 8px; font-weight: 600; transition: 0.3s; text-decoration: none;">
+                                        Xem chi tiết
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     `;
-                    container.innerHTML += html;
+                    wrapper.innerHTML += html;
                 });
+                initSwiper(".mySwiperFields");
             }
         } catch(e) { console.error(e); }
     }
-    loadFieldsDisplay();
 
-    // --- LOGIC LỊCH (Update UI Time Slot) ---
+
+    // --- LOGIC LỊCH (GIỮ NGUYÊN) ---
     async function loadSchedule() {
         const date = document.getElementById('selected_date').value;
         const fieldId = document.getElementById('field_id').value;
@@ -317,7 +396,6 @@ if ($is_logged_in) {
                 const slotDiv = document.createElement('div');
                 slotDiv.className = 'time-slot';
                 
-                // Content bên trong slot
                 slotDiv.innerHTML = `
                     <div style="font-weight: bold; font-size: 16px; margin-bottom: 4px;">${timeStr}</div>
                     <div style="font-size: 12px; color: #777;">đến ${nextHourStr}</div>
@@ -345,7 +423,7 @@ if ($is_logged_in) {
         }
     }
 
-    // --- CÁC HÀM MODAL & THANH TOÁN (GIỮ NGUYÊN LOGIC CŨ) ---
+    // --- CÁC HÀM MODAL & THANH TOÁN (GIỮ NGUYÊN) ---
     function openModal(date, timeStr) {
         if (!isLoggedIn) {
             if(confirm("🔒 Bạn cần đăng nhập để thực hiện đặt sân!\n\nNhấn OK để đến trang đăng nhập.")) {
@@ -386,7 +464,6 @@ if ($is_logged_in) {
         if (show) {
             qrSection.style.display = 'block';
             btnSubmit.innerText = "Đã chuyển khoản xong";
-            // Config QR
             const bankId = "VCB"; 
             const accountNo = "1027969285"; 
             const content = "DATSAN " + document.getElementById('modal_user_id').value;
@@ -442,7 +519,6 @@ if ($is_logged_in) {
         } catch (e) { console.error("Lỗi thời tiết:", e); }
     }
     function analyzeWeatherAndAlert(conditionId, temp) {
-        // (Logic cảnh báo giữ nguyên như cũ, chỉ chỉnh CSS hiển thị ở trên)
         let message = ''; let type = 'info'; let icon = '📢';
         if (conditionId >= 200 && conditionId < 600) { message = "Trời đang có mưa! Sân ướt, hãy cân nhắc đặt sân trong nhà."; type = 'warning'; icon = '🌧️'; } 
         else if (temp >= 33) { message = "Trời nắng nóng! Nhớ mang đủ nước."; type = 'danger'; icon = '☀️'; }
@@ -465,12 +541,10 @@ if ($is_logged_in) {
         alertDiv.style.cssText = `background: ${style.bg}; color: ${style.color}; padding: 15px; border-radius: 8px; margin-top: 20px; display: flex; align-items: center; gap: 10px; max-width: 1000px; margin: 20px auto; box-shadow: 0 4px 6px rgba(0,0,0,0.05);`;
         alertDiv.innerHTML = `<span style="font-size: 20px;">${icon}</span> <span>${msg}</span>`;
         
-        // Chèn vào sau Booking Bar
         const bar = document.querySelector('.booking-bar-container');
         bar.parentNode.insertBefore(alertDiv, bar.nextSibling);
     }
     
-    // Khởi chạy
     loadWeather();
 </script>
 
