@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Đăng Ký Thành Viên</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .box { background: white; padding: 30px; border-radius: 8px; width: 350px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 10px; margin-bottom: 15px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #28a745; color: white; border: none; cursor: pointer; }
+        .link { text-align: center; margin-top: 15px; display: block; text-decoration: none; color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2 style="text-align: center;">📝 Đăng Ký</h2>
+        <input type="text" id="full_name" placeholder="Họ và Tên">
+        <input type="text" id="phone" placeholder="Số điện thoại">
+        <input type="password" id="password" placeholder="Mật khẩu">
+        
+        <button onclick="handleRegister()">Đăng Ký Ngay</button>
+        
+        <a href="login.html" class="link">Đã có tài khoản? Đăng nhập</a>
+    </div>
+
+    <script>
+        async function handleRegister() {
+            const data = {
+                full_name: document.getElementById('full_name').value,
+                phone: document.getElementById('phone').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                const res = await fetch('api_register.php', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                
+                alert(result.message);
+                
+                if(result.status === 'success') {
+                    window.location.href = 'login.html'; // Chuyển sang trang đăng nhập
+                }
+            } catch (e) {
+                alert("Lỗi kết nối!");
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Đặt Sân</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input { padding: 8px; width: 300px; }
+        button { padding: 10px 20px; background: #28a745; color: white; border: none; cursor: pointer; }
+        #result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h2>Test API Đặt Sân</h2>
+    
+    <div class="form-group">
+        <label>ID Khách (User ID):</label>
+        <input type="number" id="user_id" value="2">
+    </div>
+    <div class="form-group">
+        <label>ID Sân (Field ID):</label>
+        <input type="number" id="field_id" value="2">
+    </div>
+    <div class="form-group">
+        <label>Bắt đầu (Start Time):</label>
+        <input type="datetime-local" id="start_time" value="2023-10-26T17:00">
+    </div>
+    <div class="form-group">
+        <label>Kết thúc (End Time):</label>
+        <input type="datetime-local" id="end_time" value="2023-10-26T18:30">
+    </div>
+
+    <button onclick="bookField()">Gửi yêu cầu Đặt sân</button>
+
+    <div id="result">Kết quả sẽ hiện ở đây...</div>
+
+    <script>
+        async function bookField() {
+            const data = {
+                user_id: document.getElementById('user_id').value,
+                field_id: document.getElementById('field_id').value,
+                start_time: document.getElementById('start_time').value, // Format: YYYY-MM-DDTHH:mm
+                end_time: document.getElementById('end_time').value
+            };
+
+            // Chuyển đổi format ngày giờ cho khớp với MySQL (thay T bằng khoảng trắng)
+            data.start_time = data.start_time.replace('T', ' ') + ':00';
+            data.end_time = data.end_time.replace('T', ' ') + ':00';
+
+            document.getElementById('result').innerHTML = "Đang gửi...";
+
+            try {
+                const response = await fetch('api_booking.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                
+                // Hiển thị kết quả đẹp hơn
+                const resultDiv = document.getElementById('result');
+                if (result.message && (result.message.includes("thành công") || result.status === 'success')) {
+                    resultDiv.innerHTML = `<b class="success">✅ ${result.message}</b>`;
+                } else {
+                    resultDiv.innerHTML = `<b class="error">❌ ${result.message || JSON.stringify(result)}</b>`;
+                }
+                
+                console.log(result);
+
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<b class="error">Lỗi kết nối: ${error.message}</b>`;
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

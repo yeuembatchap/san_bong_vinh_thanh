@@ -1,0 +1,78 @@
+/* 1. Sidebar bên trái */
+.sidebar {
+    width: 250px;
+    height: 100vh; /* Cao full màn hình */
+    background: #343a40; /* Màu tối sang trọng */
+    color: #fff;
+    position: fixed;
+    left: 0;
+    top: 0;
+    transition: all 0.3s;
+    z-index: 1000;
+}
+
+.sidebar-brand {
+    font-size: 20px;
+    font-weight: bold;
+    padding: 20px;
+    text-align: center;
+    background: #212529;
+    border-bottom: 1px solid #4b545c;
+    color: #ffc107; /* Màu vàng nổi bật */
+}
+
+/* Menu items */
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-menu li a {
+    display: block;
+    padding: 15px 20px;
+    color: #c2c7d0;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    transition: 0.2s;
+}
+
+.sidebar-menu li a:hover, 
+.sidebar-menu li a.active {
+    background-color: #007bff; /* Màu xanh khi chọn */
+    color: white;
+    padding-left: 25px; /* Hiệu ứng đẩy nhẹ sang phải */
+}
+
+.sidebar-menu li a i {
+    width: 25px; /* Căn thẳng hàng các icon */
+}
+
+.menu-label {
+    padding: 10px 20px;
+    font-size: 12px;
+    color: #6c757d;
+    text-transform: uppercase;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.btn-logout-menu:hover {
+    background-color: #dc3545 !important; /* Màu đỏ khi rê vào nút thoát */
+}
+
+/* 2. Nội dung chính bên phải */
+.main-content {
+    margin-left: 250px; /* Chừa chỗ cho sidebar */
+    padding: 30px;
+    min-height: 100vh;
+}
+
+/* Responsive: Trên điện thoại thì ẩn sidebar đi */
+@media (max-width: 768px) {
+    .sidebar { width: 70px; }
+    .sidebar-brand, .menu-label { display: none; }
+    .sidebar-menu li a { text-align: center; padding: 15px 0; }
+    .sidebar-menu li a span { display: none; } /* Ẩn chữ, chỉ hiện icon */
+    .main-content { margin-left: 70px; }
+}

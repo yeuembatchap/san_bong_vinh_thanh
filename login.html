@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Đăng nhập Hệ Thống</title>
+    <style>
+        body {
+            background-color: #e9ecef; display: flex; justify-content: center; 
+            align-items: center; height: 100vh; font-family: 'Segoe UI', sans-serif;
+        }
+        .login-box {
+            background: white; padding: 40px; border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 350px;
+        }
+        h2 { text-align: center; margin-bottom: 25px; color: #333; margin-top: 0; }
+        
+        .form-group { margin-bottom: 15px; }
+        input {
+            width: 100%; padding: 12px;
+            border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;
+            font-size: 14px;
+        }
+        button {
+            width: 100%; padding: 12px; background: #007bff;
+            color: white; border: none; border-radius: 5px; cursor: pointer;
+            font-size: 16px; font-weight: bold; transition: background 0.3s;
+        }
+        button:hover { background: #0056b3; }
+        
+        .error { color: #dc3545; text-align: center; margin-top: 10px; font-size: 14px; display: none; }
+        
+        /* CSS cho link Đăng ký */
+        .register-link {
+            text-align: center; margin-top: 20px; font-size: 14px; color: #666;
+        }
+        .register-link a {
+            color: #007bff; text-decoration: none; font-weight: bold;
+        }
+        .register-link a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <div class="login-box">
+        <h2>🔐 Đăng Nhập</h2>
+        
+        <div class="form-group">
+            <input type="text" id="phone" placeholder="Số điện thoại" value="">
+        </div>
+        <div class="form-group">
+            <input type="password" id="password" placeholder="Mật khẩu" value="">
+        </div>
+        
+        <button onclick="handleLogin()">Đăng Nhập</button>
+        
+        <div id="error-msg" class="error">Thông báo lỗi</div>
+
+        <div class="register-link">
+            Chưa có tài khoản? <a href="register.html">Đăng ký ngay</a>
+        </div>
+    </div>
+
+    <script>
+        async function handleLogin() {
+            const phone = document.getElementById('phone').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error-msg');
+            
+            // Reset thông báo lỗi
+            errorDiv.style.display = 'none';
+
+            if(!phone || !password) {
+                errorDiv.innerText = "Vui lòng nhập đầy đủ thông tin!";
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const res = await fetch('api_login.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ phone, password })
+                });
+                const data = await res.json();
+
+                if (data.status === 'success') {
+    // Kiểm tra role trả về từ API
+    if (data.role === 'ADMIN') {
+        window.location.href = 'admin_dashboard.php'; // Admin vào trang quản trị
+    } else {
+        window.location.href = 'booking_view.php'; // Khách vào trang đặt sân
+    }
+} else {
+                    errorDiv.style.display = 'block';
+                    errorDiv.innerText = data.message;
+                }
+            } catch (e) {
+                console.error(e);
+                errorDiv.style.display = 'block';
+                errorDiv.innerText = "Lỗi kết nối đến Server!";
+            }
+        }
+    </script>
+</body>
+</html>
