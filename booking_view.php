@@ -418,7 +418,7 @@ if ($is_logged_in) {
             }
 
         } catch (e) {
-            console.error(e);
+                console.error(e);
             grid.innerHTML = "Lỗi kết nối server!";
         }
     }
